@@ -78,7 +78,7 @@ pub struct AsyncStreamCDC<R> {
     mask_l_ls: u64,
 }
 
-impl<R: AsyncRead + Unpin> AsyncStreamCDC<R> {
+impl<R: AsyncRead + Unpin + Send> AsyncStreamCDC<R> {
     ///
     /// Construct a [`AsyncStreamCDC`] that will process bytes from the given source.
     ///
@@ -197,7 +197,7 @@ impl<R: AsyncRead + Unpin> AsyncStreamCDC<R> {
     }
 
     #[cfg(all(feature = "tokio", not(feature = "futures")))]
-    pub fn as_stream(&mut self) -> impl Stream<Item = Result<ChunkData, Error>> + '_ {
+    pub fn as_stream(&mut self) -> impl Stream<Item = Result<ChunkData, Error>> + Send + '_ {
         try_stream! {
             loop {
                 match self.read_chunk().await {
@@ -214,7 +214,7 @@ impl<R: AsyncRead + Unpin> AsyncStreamCDC<R> {
     }
 
     #[cfg(all(feature = "futures", not(feature = "tokio")))]
-    pub fn as_stream(&mut self) -> impl Stream<Item = Result<ChunkData, Error>> + '_ {
+    pub fn as_stream(&mut self) -> impl Stream<Item = Result<ChunkData, Error>> + Send + '_ {
         futures::stream::unfold(self, |this| async {
             let chunk = this.read_chunk().await;
             if let Err(Error::Empty) = chunk {
